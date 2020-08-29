@@ -69,11 +69,21 @@ func TestReconcileRouteTables(t *testing.T) {
 				m.DescribeRouteTables(gomock.AssignableToTypeOf(&ec2.DescribeRouteTablesInput{})).
 					Return(&ec2.DescribeRouteTablesOutput{}, nil)
 
-				privateRouteTable := m.CreateRouteTable(gomock.Eq(&ec2.CreateRouteTableInput{VpcId: aws.String("vpc-routetables")})).
+				privateRouteTable := m.CreateRouteTable(gomock.Eq(&ec2.CreateRouteTableInput{VpcId: aws.String("vpc-routetables"),
+					TagSpecifications: []*ec2.TagSpecification{{
+						ResourceType: aws.String("route-table"),
+						Tags: []*ec2.Tag{{
+							Key:   aws.String("sigs.k8s.io/cluster-api-provider-aws/cluster/test-cluster"),
+							Value: aws.String("owned"),
+						}, {
+							Key:   aws.String("sigs.k8s.io/cluster-api-provider-aws/role"),
+							Value: aws.String("common"),
+						}, {
+							Key:   aws.String("Name"),
+							Value: aws.String("test-cluster-rt-private-us-east-1a"),
+						}},
+					}}})).
 					Return(&ec2.CreateRouteTableOutput{RouteTable: &ec2.RouteTable{RouteTableId: aws.String("rt-1")}}, nil)
-
-				m.CreateTags(gomock.AssignableToTypeOf(&ec2.CreateTagsInput{})).
-					Return(nil, nil)
 
 				m.CreateRoute(gomock.Eq(&ec2.CreateRouteInput{
 					NatGatewayId:         aws.String("nat-01"),
@@ -89,7 +99,20 @@ func TestReconcileRouteTables(t *testing.T) {
 					Return(&ec2.AssociateRouteTableOutput{}, nil).
 					After(privateRouteTable)
 
-				publicRouteTable := m.CreateRouteTable(gomock.Eq(&ec2.CreateRouteTableInput{VpcId: aws.String("vpc-routetables")})).
+				publicRouteTable := m.CreateRouteTable(gomock.Eq(&ec2.CreateRouteTableInput{VpcId: aws.String("vpc-routetables"),
+					TagSpecifications: []*ec2.TagSpecification{{
+						ResourceType: aws.String("route-table"),
+						Tags: []*ec2.Tag{{
+							Key:   aws.String("sigs.k8s.io/cluster-api-provider-aws/cluster/test-cluster"),
+							Value: aws.String("owned"),
+						}, {
+							Key:   aws.String("sigs.k8s.io/cluster-api-provider-aws/role"),
+							Value: aws.String("common"),
+						}, {
+							Key:   aws.String("Name"),
+							Value: aws.String("test-cluster-rt-public-us-east-1a"),
+						}},
+					}}})).
 					Return(&ec2.CreateRouteTableOutput{RouteTable: &ec2.RouteTable{RouteTableId: aws.String("rt-2")}}, nil)
 
 				m.CreateRoute(gomock.Eq(&ec2.CreateRouteInput{
@@ -98,9 +121,6 @@ func TestReconcileRouteTables(t *testing.T) {
 					RouteTableId:         aws.String("rt-2"),
 				})).
 					After(publicRouteTable)
-
-				m.CreateTags(gomock.AssignableToTypeOf(&ec2.CreateTagsInput{})).
-					Return(nil, nil)
 
 				m.AssociateRouteTable(gomock.Eq(&ec2.AssociateRouteTableInput{
 					RouteTableId: aws.String("rt-2"),

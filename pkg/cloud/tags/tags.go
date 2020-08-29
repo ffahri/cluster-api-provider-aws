@@ -105,6 +105,19 @@ func WithEC2(ec2client ec2iface.EC2API) BuilderOption {
 		}
 	}
 }
+func (b *Builder) GetTags(params *infrav1.BuildParams) []*ec2.Tag {
+	tags := infrav1.Build(*params)
+
+	awsTags := make([]*ec2.Tag, 0, len(tags))
+	for k, v := range tags {
+		tag := &ec2.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		}
+		awsTags = append(awsTags, tag)
+	}
+	return awsTags
+}
 
 func computeDiff(current infrav1.Tags, buildParams infrav1.BuildParams) infrav1.Tags {
 	want := infrav1.Build(buildParams)
